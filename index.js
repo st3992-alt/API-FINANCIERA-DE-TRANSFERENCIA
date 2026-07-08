@@ -18,14 +18,17 @@ connectDB();
 app.use(helmet());
 app.use(express.json());
 
+// Ruta de prueba
+app.get('/', (req, res) => {
+    res.json({
+        message: 'API Financiera de Transferencias funcionando correctamente'
+    });
+});
+
 // Rutas
 app.use('/api/accounts', accountRoutes);
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/auditlogs', auditLogRoutes);
 
-const PORT = process.env.PORT || 5100;
-
-app.listen(PORT, () => {
-    console.log('Hello World');
-    console.log(`Server running on port ${PORT}`);
-});
+// Exportar para Vercel
+module.exports = app;
