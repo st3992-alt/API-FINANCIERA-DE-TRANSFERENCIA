@@ -9,6 +9,8 @@ const accountRoutes = require('./ROUTES/account.routes');
 const transactionRoutes = require('./ROUTES/transaction.routes');
 const auditLogRoutes = require('./ROUTES/auditLog.routes');
 
+const validateAppToken = require('./appToken.middleware');
+
 const app = express();
 
 // Conexión a MongoDB
@@ -17,6 +19,7 @@ connectDB();
 // Middlewares
 app.use(helmet());
 app.use(express.json());
+app.use(validateAppToken);
 
 // Ruta principal
 app.get('/', (req, res) => {
