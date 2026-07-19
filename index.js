@@ -22,14 +22,14 @@ connectDB();
 app.use(helmet());
 app.use(express.json());
 
-// Ruta principal pública
+// Ruta principal (pública)
 app.get('/', (req, res) => {
     res.json({
         message: 'API Financiera de Transferencias funcionando correctamente'
     });
 });
 
-// Generar JWT
+// Ruta para generar JWT
 app.post('/token', (req, res) => {
 
     const payload = {
@@ -38,36 +38,29 @@ app.post('/token', (req, res) => {
 
     const token = jwt.sign(
         payload,
-        process.env.JWT_SECRET,
-        {
-            expiresIn: '1825d'
-        }
+        process.env.app_token,
+        { expiresIn: '180000d' }
     );
 
     res.json({ token });
 
 });
 
-// Todo lo demás protegido
-app.use(authMiddleware);
+// Rutas protegidas con JWT
+app.use('/api/accounts', authMiddleware, accountRoutes);
+app.use('/api/transactions', authMiddleware, transactionRoutes);
+app.use('/api/auditlogs', authMiddleware, auditLogRoutes);
 
-app.use('/api/accounts', accountRoutes);
-app.use('/api/transactions', transactionRoutes);
-app.use('/api/auditlogs', auditLogRoutes);
-
-// Servidor local
+// Solo inicia el servidor localmente
 if (process.env.NODE_ENV !== 'production') {
-
     const PORT = process.env.PORT || 5100;
 
     app.listen(PORT, () => {
-
         console.log('=================================');
         console.log(`🚀 Server running on port ${PORT}`);
         console.log('=================================');
-
     });
-
 }
 
+// Exportar para Vercel
 module.exports = app;
