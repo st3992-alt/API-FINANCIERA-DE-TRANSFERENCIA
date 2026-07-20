@@ -25,3 +25,4 @@ console.log('=================================');
 console.log('JWT genérico generado:');
 console.log('=================================');
 console.log(token);
+

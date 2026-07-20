@@ -1,32 +1,38 @@
 const jwt = require('jsonwebtoken');
 
 const authMiddleware = (req, res, next) => {
-
-    const token = req.headers.authorization?.split(' ')[1];
+    // Los nombres de headers llegan en minúsculas a Node
+    const token = req.headers['app_token'];
 
     if (!token) {
         return res.status(401).json({
-            message: 'Token requerido'
+            message: 'JWT requerido en el header APP_TOKEN'
+        });
+    }
+
+    if (!process.env.APP_TOKEN) {
+        return res.status(500).json({
+            message: 'APP_TOKEN no está configurado'
         });
     }
 
     try {
-
         const decoded = jwt.verify(
-            token,
-            process.env.JWT_SECRET
+            token.trim(),
+            process.env.APP_TOKEN,
+            {
+                algorithms: ['HS256']
+            }
         );
 
-        req.user = decoded;
-
+        req.tokenData = decoded;
         next();
 
     } catch (error) {
-
-        return res.status(401).json({
-            message: 'Token inválido'
+        return res.status(403).json({
+            message: 'JWT inválido',
+            error: error.message
         });
-
     }
 };
 

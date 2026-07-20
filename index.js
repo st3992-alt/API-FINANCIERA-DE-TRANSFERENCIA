@@ -13,41 +13,36 @@ const accountRoutes = require('./ROUTES/account.routes');
 const transactionRoutes = require('./ROUTES/transaction.routes');
 const auditLogRoutes = require('./ROUTES/auditLog.routes');
 
-const validateAppToken = require('./appToken.middleware');
-
 const app = express();
 
 // Conexión a MongoDB
 connectDB();
-// Middlewares
+
+// Middlewares generales
 app.use(helmet());
 app.use(express.json());
-app.use(validateAppToken);
 
-// Ruta principal
 // Ruta principal pública
 app.get('/', (req, res) => {
-    res.status(200).json({
+    return res.status(200).json({
         message: 'API Financiera de Transferencias funcionando correctamente'
     });
 });
 
-// Ruta pública para generar siempre el mismo JWT
+// Ruta pública para generar el JWT
 app.post('/token', (req, res) => {
     try {
-        // Comprobar que exista APP_TOKEN
         if (!process.env.APP_TOKEN) {
             return res.status(500).json({
-                message: 'APP_TOKEN no está configurado en el servidor'
+                message: 'APP_TOKEN no está configurado'
             });
         }
 
-        // El payload debe permanecer igual para producir el mismo JWT
         const payload = {
             app: 'API Financiera de Transferencias'
         };
 
-        // noTimestamp evita que se agregue una fecha diferente
+        // noTimestamp permite generar siempre el mismo JWT
         const token = jwt.sign(
             payload,
             process.env.APP_TOKEN,
@@ -62,35 +57,24 @@ app.post('/token', (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error al generar el JWT:', error.message);
+        console.error('Error al generar JWT:', error.message);
 
         return res.status(500).json({
-            message: 'Error al generar el token',
+            message: 'Error al generar JWT',
             error: error.message
         });
     }
 });
 
-// Rutas protegidas con JWT
-app.use(
-    '/api/accounts',
-    authMiddleware,
-    accountRoutes
-);
+// Todas las rutas siguientes requieren un JWT
+app.use(authMiddleware);
 
-app.use(
-    '/api/transactions',
-    authMiddleware,
-    transactionRoutes
-);
+// Rutas protegidas
+app.use('/api/accounts', authMiddleware, accountRoutes);
+app.use('/api/transactions', authMiddleware, transactionRoutes);
+app.use('/api/auditlogs', authMiddleware, auditLogRoutes);
 
-app.use(
-    '/api/auditlogs',
-    authMiddleware,
-    auditLogRoutes
-);
-
-// Middleware para rutas inexistentes
+// Ruta inexistente
 app.use((req, res) => {
     return res.status(404).json({
         message: 'Ruta no encontrada'
@@ -106,13 +90,11 @@ app.use((error, req, res, next) => {
     });
 });
 
-// Ejecutar el servidor solamente en local
+// Ejecutar servidor localmente
 if (process.env.NODE_ENV !== 'production') {
-
     const PORT = process.env.PORT || 5100;
 
     app.listen(PORT, () => {
-
         console.log('=================================');
         console.log(`Server running on port ${PORT}`);
         console.log(
@@ -120,10 +102,8 @@ if (process.env.NODE_ENV !== 'production') {
             Boolean(process.env.APP_TOKEN)
         );
         console.log('=================================');
-
     });
-
 }
 
-// Exportar la aplicación para Vercel
+// Exportar para Vercel
 module.exports = app;
