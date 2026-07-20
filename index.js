@@ -27,40 +27,86 @@ app.use(validateAppToken);
 // Ruta principal
 // Ruta principal pública
 app.get('/', (req, res) => {
-    res.json({
+    res.status(200).json({
         message: 'API Financiera de Transferencias funcionando correctamente'
     });
 });
 
-// Rutas
-// Generar JWT
+// Ruta pública para generar siempre el mismo JWT
 app.post('/token', (req, res) => {
-
-    const payload = {
-        app: 'API Financiera de Transferencias'
-    };
-
-    const token = jwt.sign(
-        payload,
-        process.env.JWT_SECRET,
-        {
-            expiresIn: '1825d'
+    try {
+        // Comprobar que exista APP_TOKEN
+        if (!process.env.APP_TOKEN) {
+            return res.status(500).json({
+                message: 'APP_TOKEN no está configurado en el servidor'
+            });
         }
-    );
 
-    res.json({ token });
+        // El payload debe permanecer igual para producir el mismo JWT
+        const payload = {
+            app: 'API Financiera de Transferencias'
+        };
 
+        // noTimestamp evita que se agregue una fecha diferente
+        const token = jwt.sign(
+            payload,
+            process.env.APP_TOKEN,
+            {
+                algorithm: 'HS256',
+                noTimestamp: true
+            }
+        );
+
+        return res.status(200).json({
+            token
+        });
+
+    } catch (error) {
+        console.error('Error al generar el JWT:', error.message);
+
+        return res.status(500).json({
+            message: 'Error al generar el token',
+            error: error.message
+        });
+    }
 });
 
-// Todo lo demás protegido
-app.use(authMiddleware);
+// Rutas protegidas con JWT
+app.use(
+    '/api/accounts',
+    authMiddleware,
+    accountRoutes
+);
 
-app.use('/api/accounts', accountRoutes);
-app.use('/api/transactions', transactionRoutes);
-app.use('/api/auditlogs', auditLogRoutes);
+app.use(
+    '/api/transactions',
+    authMiddleware,
+    transactionRoutes
+);
 
-// Solo inicia el servidor localmente
-// Servidor local
+app.use(
+    '/api/auditlogs',
+    authMiddleware,
+    auditLogRoutes
+);
+
+// Middleware para rutas inexistentes
+app.use((req, res) => {
+    return res.status(404).json({
+        message: 'Ruta no encontrada'
+    });
+});
+
+// Middleware general de errores
+app.use((error, req, res, next) => {
+    console.error('Error del servidor:', error.message);
+
+    return res.status(500).json({
+        message: 'Error interno del servidor'
+    });
+});
+
+// Ejecutar el servidor solamente en local
 if (process.env.NODE_ENV !== 'production') {
 
     const PORT = process.env.PORT || 5100;
@@ -68,12 +114,16 @@ if (process.env.NODE_ENV !== 'production') {
     app.listen(PORT, () => {
 
         console.log('=================================');
-        console.log(`🚀 Server running on port ${PORT}`);
+        console.log(`Server running on port ${PORT}`);
+        console.log(
+            'APP_TOKEN configurado:',
+            Boolean(process.env.APP_TOKEN)
+        );
         console.log('=================================');
 
     });
 
 }
 
-// Exportar para Vercel
+// Exportar la aplicación para Vercel
 module.exports = app;
