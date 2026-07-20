@@ -24,7 +24,6 @@ app.use(express.json());
 
 // Ruta principal pública
 app.get('/', (req, res) => {
-<<<<<<< HEAD
     res.status(200).json({
 =======
     return res.status(200).json({
