@@ -1,33 +1,38 @@
-const jwt = require('jsonwebtoken');
-
 const authMiddleware = (req, res, next) => {
+    // Aceptar temporalmente ambas formas
+    const tokenRecibido = (
+        req.get('app_token') ||
+        req.get('app-token') ||
+        ''
+    ).trim();
 
-    const token = req.headers.authorization?.split(' ')[1];
+    const tokenGuardado = (
+        process.env.APP_TOKEN ||
+        ''
+    ).trim();
 
-    if (!token) {
+    if (!tokenRecibido) {
         return res.status(401).json({
-            message: 'Token requerido'
+            message: 'Token requerido',
+            headerEsperado: 'app_token'
         });
     }
 
-    try {
-
-        const decoded = jwt.verify(
-            token,
-            process.env.APP_TOKEN
-        );
-
-        req.user = decoded;
-
-        next();
-
-    } catch (error) {
-
-        return res.status(401).json({
-            message: 'Token inválido'
+    if (!tokenGuardado) {
+        return res.status(500).json({
+            message: 'APP_TOKEN no está configurado'
         });
-
     }
+
+    if (tokenRecibido !== tokenGuardado) {
+        return res.status(403).json({
+            message: 'Token de autorización inválido',
+            longitudRecibida: tokenRecibido.length,
+            longitudGuardada: tokenGuardado.length
+        });
+    }
+
+    next();
 };
 
 module.exports = authMiddleware;
